@@ -22,17 +22,43 @@ The images from CelebA are also tightly cropped, front-facing celebrity portrait
 
 A four-stage filtering pipeline is applied before any splitting or modelling, with removal counts in Table 2. 
 <div align="center">
-  <img width="550" height="173" alt="image" src="https://github.com/user-attachments/assets/64814d75-e252-4ffc-b3d2-a7684adbd553" />
+  <img width="550" height="140" alt="image" src="https://github.com/user-attachments/assets/6f5d96c3-3633-4e00-844b-d9f2f7975441" />
   <p><em>Table 2: Integrity Checks</em></p>
 </div>
+
 Stage one verifies file integrity by attempting to open each image with PIL and then manually reviewing the HairLoss bald data set, resulting in 155 removed images.
 
 Stage two detects duplicates by perceptual hashing (phash) (see Table 2). Any images with a hamming distance less than 3 were declared duplicates. Average hashing was also calculated for both balding and notbalding data sets, to detect more images, potentially missed by phash. However, average hashing was only used for balding images, as it declared different images “similar” in the notbalding data set. Pairs across the balding and notbalding data sets were also checked and removed, to reduce data leakage.
 
-Stage three evaluates per-channel RGB and overall brightness. EDA confirmed that all images were valid RGB at and no RGB anomalies were found. Brightness differed systematically between sources (CelebA mean 112.14, HairLoss 132.41) but only slightly between classes (bald 115.40, not-bald 112.59) (see [Figure 2](#contrast-brightness-source))(another href way <a href="#contrast-brightness-source"> figure 2</a>. The between-source difference of roughly 20 intensity units is an order of magnitude larger than the between-class difference of roughly 3, so a model could exploit source-correlated brightness rather than class-relevant features, which motivates the source-balanced split. Inspection of the brightest images surfaced three animated drawings in the bald class, which were removed, leaving 4,612 bald images (Appendix I). 
+Stage three evaluates per-channel RGB and overall brightness. EDA confirmed that all images were valid RGB at and no RGB anomalies were found. Brightness differed systematically between sources (CelebA mean 112.14, HairLoss 132.41) but only slightly between classes (bald 115.40, not-bald 112.59) (see [Figure 2](#contrast-brightness-source)). The between-source difference of roughly 20 intensity units is an order of magnitude larger than the between-class difference of roughly 3, so a model could exploit source-correlated brightness rather than class-relevant features, which motivates the source-balanced split. Inspection of the brightest images surfaced three animated drawings in the bald class, which were removed, leaving 4,612 bald images. 
 
 Stage four evaluates pixel-intensity contrast, which is close across both sources (66.33 against 67.78) and classes (64.81 against 66.78). No images were removed on contrast, but the statistics are reported to characterise the data. 
 <div align="center" id = "contrast-brightness-source">
   <img width="592" height="250" alt="image" src="https://github.com/user-attachments/assets/de30b62c-e3a2-4ee4-9882-884abe99eab1" />
   <p><em>Figure 2: Brightness and contrast differences split on source of image.</em></p>
+</div>
+
+## Train, Validation, and Test Split
+
+The data is partitioned 60/20/20 with a fixed seed of 42. Stratification was done to preserve both class balance, and source balance. Yielding an approximate 23% balding rate, and 96% CelebA rate, across data sets. The index assignments are written and consumed identically by every model, so cross-model comparisons remain valid. 
+
+## Data Normalisation and Augmentation
+All inputs are resized to 224×224 and rescaled to [0, 1], with ImageNet channel-wise normalisation additionally applied for the pretrained ResNet50. Augmentation is applied only to the training subset, and balding images, keeping test and validation images real and increasing the minority class. Two transformations are used: random horizontal flip (justified by the bilateral symmetry of the face) and additive Gaussian noise at σ=0.05 (simulating sensor variation). Each is applied to every bald training image, tripling the bald subset and shifting the effective training distribution from 23% to 47% bald. Color jitter was implemented and tested but disabled in the final pipeline because horizontal flip and Gaussian noise alone produced the most stable training dynamics for the CNN. Augmentation magnitudes are otherwise kept small so as to not remove important features from the data set. [Figure 3](#augmentation) shows an example of the augmentations applied to training images.
+<div align="center" id="augmentations">
+  <img width="552" height="149" alt="image" src="https://github.com/user-attachments/assets/2d3665fd-51cc-4a9b-980a-0c672eadf61c" />
+  <p><em>Figure 3: Data augmentation applied to exemplary image</em></p>
+</div>
+
+## CNN
+The initial CNN structure consisted of 3 Conv2D layers, followed by batch normalization, ReLU activation, and max pooling. The three convolutional layers contained 16, 32, and 64 filters, respectively, each using a kernel size of 3 × 3. This kernel size was selected to balance computational efficiency with the ability to extract local spatial features. Following the convolutional blocks, the feature maps were flattened and passed to a fully connected layer with 256 neurons, followed by a single-neuron output layer to produce a probabilistic binary prediction.
+
+Several iterative experiments were conducted to improve model performance and reduce overfitting. These included the introduction of dropout, reduction of the learning rate, adjustment of batch size to 64, and modification of the number of training epochs to account for the reduced number of weight updates per epoch. In addition, callback functions were implemented, including model checkpointing, early stopping, and learning rate reduction on plateau. Different combinations of image augmentation techniques were also evaluated, along with modifications to the network depth and the use of a weighted binary cross-entropy loss function to penalize misclassification of positive (bald) images more heavily.
+
+The final model architecture (see [figure 4](#finalcnn)) consisted of four convolutional blocks with 16, 32, 64, and 128 filters, respectively, all using 3 × 3 kernels. Each block was followed by batch normalization, ReLU activation, and MaxPooling2D. The convolutional layers were followed by a fully connected layer with 256 neurons and a dropout layer with a rate of 0.4. The output layer contained a single neuron with sigmoid activation for binary classification.
+
+The model was trained using the Adam optimizer with a learning rate of 1 × 10⁻⁴. Weighted binary cross-entropy was used as the loss function, with the positive class weight calculated as the ratio of negative to positive samples plus 1, resulting in a value of 2.11. Training employed three callback functions: early stopping with a patience of 15 epochs, ReduceLROnPlateau with a patience of 5 epochs, and model checkpointing to retain the best-performing model.
+
+<div align="center" id="finalcnn">
+  <img width="697" height="321" alt="image" src="https://github.com/user-attachments/assets/6890ff13-b426-4e91-8385-2e59e439557f" />
+  <p><em>Figure 4: Final CNN Design Summarised </em></p>
 </div>
