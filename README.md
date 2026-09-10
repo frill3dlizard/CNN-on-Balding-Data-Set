@@ -62,3 +62,45 @@ The model was trained using the Adam optimizer with a learning rate of 1 × 10�
   <img width="697" height="321" alt="image" src="https://github.com/user-attachments/assets/6890ff13-b426-4e91-8385-2e59e439557f" />
   <p><em>Figure 4: Final CNN Design Summarised </em></p>
 </div>
+
+## Assignment Context
+
+This repository contains the custom convolutional neural network (CNN) component of a machine-learning assignment on binary baldness classification from ordinary facial photographs. The practical objective is a first-stage screening signal: classify an image as **bald** or **not bald** before any later human assessment. The CNN is trained from scratch and is the focus of this repository. The wider assignment used the same fixed data partitions to contextualise the CNN against other approaches, but those other implementations and their results are not part of this CNN description.
+
+## CNN Evaluation
+
+The held-out test set contains 3,995 images and approximately 23% bald examples. Because a majority-class prediction already gives high accuracy on an imbalanced split, macro-F1 and bald-class precision and recall are more informative than accuracy alone. The CNN used a validation-selected decision threshold of 0.583.
+
+| Metric | Custom CNN |
+| --- | ---: |
+| Macro-F1 | 0.91 |
+| Bald precision | 0.80 |
+| Bald recall | 0.94 |
+| Bald F1 | 0.86 |
+| Validation ROC-AUC | 0.978 |
+| Training time | approximately 16 minutes |
+| Inference time | approximately 0.8 ms per image |
+
+On the test set, the CNN correctly identified 868 of 922 bald images and missed 54 (false-negative rate 5.9%). It incorrectly flagged 219 of 3,073 not-bald images as bald (false-positive rate 7.1%). The high bald recall is useful for a screening stage, while the lower bald precision means that positive predictions still require follow-up review.
+
+## Interpretation and Error Analysis
+
+The training accuracy increased from 0.73 to 0.89 over 20 epochs while training loss decreased from 0.77 to 0.30. Validation behaviour was more variable early in training, but validation loss reached 0.2578 at the final epoch. Batch normalization, dropout, weighted loss, and minority-class augmentation helped limit the gap between training and validation performance.
+
+Grad-CAM inspection of the final convolutional layer indicates that the CNN learned a meaningful visual cue: scalp visibility around the crown. Activations for confident bald predictions were concentrated near the top of the head rather than on the background or image framing. This also explains an important failure mode: when a hat or thick hair hides the crown, the network lacks its main positive cue and may default to not-bald. Some apparent false positives also reflect label noise, unusual viewpoints, multiple people, or differences between the CelebA and HairLoss image sources.
+
+For context, the same-input comparison in the assignment showed that the custom CNN improved on the non-neural baselines but remained below a fine-tuned pretrained ResNet50. This is consistent with the CNN learning useful task-specific features from scratch while the pretrained model starts with a richer visual representation; it does not change the custom CNN's standalone result above.
+
+## Limitations and Future Work
+
+The working data is a curated subsample with an artificially increased bald prevalence of about 23%, rather than the roughly 2% prevalence of the original CelebA bald attribute. Precision may therefore be substantially lower in deployment, and performance at the natural prevalence was not measured. CelebA annotations are crowdsourced and can contain label noise, while the two sources differ in brightness, framing, pose, and image style despite source-aware stratification.
+
+The final CNN evaluation represents one selected imbalance strategy: threefold augmentation of bald training images together with weighted binary cross-entropy. A systematic comparison with undersampling, alternative class weights, focal loss, and other sampling strategies would clarify whether the remaining precision gap is intrinsic to the architecture or caused by the training distribution. Additional occlusion-focused augmentation and a graded hair-loss target could also address the crown-occlusion failure mode. Evaluation on a new, naturally prevalent dataset is needed before using the model for real screening.
+
+## References
+
+- Benhabiles, H., Hammoudi, K., Yang, Z., Windal, F., Melkemi, M., Dornaika, F., & Arganda-Carreras, I. (2019). *Deep learning based detection of hair loss levels from facial images*. 2019 Ninth International Conference on Image Processing Theory, Tools and Applications, 1–6.
+- He, K., Zhang, X., Ren, S., & Sun, J. (2016). *Deep residual learning for image recognition*. Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, 770–778. https://doi.org/10.1109/CVPR.2016.90
+- Liu, Z., Luo, P., Wang, X., & Tang, X. (2015). *Deep learning face attributes in the wild*. Proceedings of the IEEE International Conference on Computer Vision, 3730–3738.
+- Selvaraju, R. R., Cogswell, M., Das, A., Vedantam, R., Parikh, D., & Batra, D. (2017). *Grad-CAM: Visual explanations from deep networks via gradient-based localization*. Proceedings of the IEEE International Conference on Computer Vision, 618–626. https://doi.org/10.1109/ICCV.2017.74
+- The primary data sources are the [CelebA-derived bald classification dataset](https://www.kaggle.com/datasets/ashishjangra27/bald-classification-200k-images-celeba) and the [HairLoss dataset](https://www.kaggle.com/datasets/sithukaungset/hairlossdataset).
