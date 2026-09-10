@@ -101,6 +101,11 @@ Grad-CAM inspection of the final convolutional layer indicates that the CNN lear
   <p><em>Figure 6: Grad-CAM overlay for a confident bald-class prediction, highlighting the crown and scalp region.</em></p>
 </div>
 
+<div align="center">
+  <img width="1400" alt="Six most confidently wrong custom CNN test predictions" src="assets/cnn-report/cnn-error-analysis.png" />
+  <p><em>Figure 7: The six most confidently wrong custom-CNN test predictions, with false positives on the top row and false negatives on the bottom.</em></p>
+</div>
+
 For context, the same-input comparison in the assignment showed that the custom CNN improved on the non-neural baselines but remained below a fine-tuned pretrained ResNet50. This is consistent with the CNN learning useful task-specific features from scratch while the pretrained model starts with a richer visual representation, as motivated by residual learning (He et al. [2016](#references)); it does not change the custom CNN's standalone result above.
 
 ## Limitations and Future Work
@@ -111,7 +116,7 @@ The final CNN evaluation represents one selected imbalance strategy: threefold a
 
 <div align="center">
   <img width="1440" alt="CNN preprocessing and augmentation pipeline" src="assets/cnn-report/cnn-preprocessing-pipeline.png" />
-  <p><em>Figure 7: Filtering, normalisation, stratified splitting, and CNN-specific augmentation pipeline.</em></p>
+  <p><em>Figure 8: Filtering, normalisation, stratified splitting, and CNN-specific augmentation pipeline.</em></p>
 </div>
 
 ## References
