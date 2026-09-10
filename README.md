@@ -2,10 +2,10 @@
 
 ## Assignment Context
 
-This repository contains the custom convolutional neural network (CNN) component of a machine-learning assignment on binary baldness classification from ordinary facial photographs. The practical objective is a first-stage screening signal: classify an image as **bald** or **not bald** before any later human assessment. The CNN is trained from scratch and is the focus of this repository. The wider assignment used the same fixed data partitions to contextualise the CNN against other approaches, but those other implementations and their results are not part of this CNN description. The CelebA attribute labels and their class imbalance are described by Liu et al. ([2015](#references)).
+This repository contains the custom convolutional neural network (CNN) component of a machine-learning assignment on binary baldness classification from ordinary facial photographs. The practical objective is a first-stage screening signal: classify an image as **bald** or **not bald** before any later human assessment. The CNN is trained from scratch and is the focus of this repository. The wider assignment used the same fixed data partitions to contextualise the CNN against other approaches, but those other implementations and their results are not part of this CNN description. The CelebA attribute labels and their class imbalance are described by Liu et al. ([2015](#references)), while prior hair-loss work supports the use of facial images for this type of task (Benhabiles et al. [2019](#references)).
 
 ## Description of Data Set
-The models are trained and evaluated on two public Kaggle datasets: a CelebA-derived set (ashishjangra27/bald-classification-200k-images-celeba), introduced by Liu et al. (2015), of roughly 200,000 aligned 178×218 celebrity faces pre-labelled bald or not-bald, and the HairLoss set (sithukaungset/hairlossdataset) of 1,114 images with the same binary labels at varied resolutions. The CelebA bald attribute has a positive rate of roughly 2 percent and inherits crowdsourced label noise, which is acknowledged as a limitation. 
+The models are trained and evaluated on two public Kaggle datasets: a CelebA-derived set (ashishjangra27/bald-classification-200k-images-celeba), introduced by Liu et al. (2015), of roughly 200,000 aligned 178×218 celebrity faces pre-labelled bald or not-bald, and the HairLoss set (sithukaungset/hairlossdataset) of 1,114 images with the same binary labels at varied resolutions. The CelebA bald attribute has a positive rate of roughly 2 percent and inherits crowdsourced label noise, which is acknowledged as a limitation.
 
 <div align="center">
   <img width="461" height="127" alt="image" src="https://github.com/user-attachments/assets/894b370c-9a94-4e98-91d1-5aa25725d5ed" />
@@ -14,13 +14,13 @@ The models are trained and evaluated on two public Kaggle datasets: a CelebA-der
 
 
 Rather than the full CelebA set, a subsample was used: 5,000 not-bald images from each of the three existing CelebA splits (15,000 total) with the bald class kept in full (4,547 images), which raises the positive rate to roughly 25 percent and prevents CelebA from dominating the much smaller HairLoss set. The 560 HairLoss bald images were manually reviewed and mislabelled, multi-person, composite, and unusable samples removed.
-The collected images varied widely in size, which would introduce noise if left unnormalised, and the two sources differ slightly in style and variety. Figure 1 depicts the distribution of image sizes across the gathered data from kaggle. The images from CelebA had consistent dimensions (178x218), while the HairLoss dataset had very dispersed image sizes.
+The collected images varied widely in size, which would introduce noise if left unnormalised, and the two sources differ slightly in style and variety. Figure 1 depicts the distribution of image sizes across the gathered data from Kaggle. The images from CelebA had consistent dimensions (178x218), while the HairLoss dataset had very dispersed image sizes.
 <div align="center">
   <img width="380" height="317" alt="image" src="https://github.com/user-attachments/assets/83a601da-5ff0-4f1c-8937-fa40a8bf93a1" />
   <p><em>Figure 1: Image height (pixels) against width (pixels). Blue and orange points represent balding and not balding images, respectively. The red line represents square images.</em></p>
 </div>
 
-The images from CelebA are also tightly cropped, front-facing celebrity portraits with consistent dimensions and a relatively uniform style. In contrast to the HairLoss images which differ in framing, pose and style (pictures taken from above, side, etc.)
+The images from CelebA are also tightly cropped, front-facing celebrity portraits with consistent dimensions and a relatively uniform style, in contrast to the HairLoss images, which differ in framing, pose, and style (including pictures taken from above or from the side).
 
 ## Description of EDA & Integrity Checks
 
@@ -34,7 +34,7 @@ Stage one verifies file integrity by attempting to open each image with PIL and 
 
 Stage two detects duplicates by perceptual hashing (phash) (see Table 2). Any images with a hamming distance less than 3 were declared duplicates. Average hashing was also calculated for both balding and notbalding data sets, to detect more images, potentially missed by phash. However, average hashing was only used for balding images, as it declared different images “similar” in the notbalding data set. Pairs across the balding and notbalding data sets were also checked and removed, to reduce data leakage.
 
-Stage three evaluates per-channel RGB and overall brightness. EDA confirmed that all images were valid RGB at and no RGB anomalies were found. Brightness differed systematically between sources (CelebA mean 112.14, HairLoss 132.41) but only slightly between classes (bald 115.40, not-bald 112.59) (see [Figure 2](#contrast-brightness-source)). The between-source difference of roughly 20 intensity units is an order of magnitude larger than the between-class difference of roughly 3, so a model could exploit source-correlated brightness rather than class-relevant features, which motivates the source-balanced split. Inspection of the brightest images surfaced three animated drawings in the bald class, which were removed, leaving 4,612 bald images. 
+Stage three evaluates per-channel RGB and overall brightness. EDA confirmed that all images were valid RGB and that no RGB anomalies were found. Brightness differed systematically between sources (CelebA mean 112.14, HairLoss 132.41) but only slightly between classes (bald 115.40, not-bald 112.59) (see [Figure 2](#contrast-brightness-source)). The between-source difference of roughly 20 intensity units is an order of magnitude larger than the between-class difference of roughly 3, so a model could exploit source-correlated brightness rather than class-relevant features, which motivates the source-balanced split. Inspection of the brightest images surfaced three animated drawings in the bald class, which were removed, leaving 4,612 bald images.
 
 Stage four evaluates pixel-intensity contrast, which is close across both sources (66.33 against 67.78) and classes (64.81 against 66.78). No images were removed on contrast, but the statistics are reported to characterise the data. 
 <div align="center" id = "contrast-brightness-source">
@@ -44,10 +44,10 @@ Stage four evaluates pixel-intensity contrast, which is close across both source
 
 ## Train, Validation, and Test Split
 
-The data is partitioned 60/20/20 with a fixed seed of 42. Stratification was done to preserve both class balance, and source balance. Yielding an approximate 23% balding rate, and 96% CelebA rate, across data sets. The index assignments are written and consumed identically by every model, so cross-model comparisons remain valid. 
+The data is partitioned 60/20/20 with a fixed seed of 42. Stratification preserves both class balance and source balance, yielding an approximate 23% balding rate and 96% CelebA proportion across the split. The index assignments are written and consumed identically by every model, so cross-model comparisons remain valid.
 
 ## Data Normalisation and Augmentation
-All inputs are resized to 224×224 and rescaled to [0, 1], with ImageNet channel-wise normalisation additionally applied for the pretrained ResNet50. Augmentation is applied only to the training subset, and balding images, keeping test and validation images real and increasing the minority class. Two transformations are used: random horizontal flip (justified by the bilateral symmetry of the face) and additive Gaussian noise at σ=0.05 (simulating sensor variation). Each is applied to every bald training image, tripling the bald subset and shifting the effective training distribution from 23% to 47% bald. Color jitter was implemented and tested but disabled in the final pipeline because horizontal flip and Gaussian noise alone produced the most stable training dynamics for the CNN. Augmentation magnitudes are otherwise kept small so as to not remove important features from the data set. [Figure 3](#augmentation) shows an example of the augmentations applied to training images.
+All inputs are resized to 224×224 and rescaled to [0, 1], with ImageNet channel-wise normalisation additionally applied for the pretrained ResNet50. Augmentation is applied only to the training subset and to balding images, keeping test and validation images real while increasing the minority class. Two transformations are used: random horizontal flip (justified by the bilateral symmetry of the face) and additive Gaussian noise at σ=0.05 (simulating sensor variation). Each is applied to every bald training image, tripling the bald subset and shifting the effective training distribution from 23% to 47% bald. Color jitter was implemented and tested but disabled in the final pipeline because horizontal flip and Gaussian noise alone produced the most stable training dynamics for the CNN. Augmentation magnitudes are otherwise kept small so as not to remove important features from the data set. [Figure 3](#augmentations) shows an example of the augmentations applied to training images.
 <div align="center" id="augmentations">
   <img width="552" height="149" alt="image" src="https://github.com/user-attachments/assets/2d3665fd-51cc-4a9b-980a-0c672eadf61c" />
   <p><em>Figure 3: Data augmentation applied to exemplary image</em></p>
@@ -71,7 +71,7 @@ The model was trained using the Adam optimizer with a learning rate of 1 × 10�
 
 The held-out test set contains 3,995 images and approximately 23% bald examples. Because a majority-class prediction already gives high accuracy on an imbalanced split, macro-F1 and bald-class precision and recall are more informative than accuracy alone. The CNN used a validation-selected decision threshold of 0.583.
 
-The report figures used to document this CNN are stored in `assets/cnn-report/`, including the preprocessing pipeline, augmentation examples, training curves, and interpretability outputs.
+The report figures used to document this CNN are stored in `assets/cnn-report/`, including the preprocessing pipeline, training curves, and interpretability output.
 
 | Metric | Custom CNN |
 | --- | ---: |
@@ -101,27 +101,17 @@ Grad-CAM inspection of the final convolutional layer indicates that the CNN lear
   <p><em>Figure 6: Grad-CAM overlay for a confident bald-class prediction, highlighting the crown and scalp region.</em></p>
 </div>
 
-<div align="center">
-  <img width="1400" alt="Most confidently wrong custom CNN test predictions" src="assets/cnn-report/cnn-error-analysis.png" />
-  <p><em>Figure 7: Most confidently wrong custom-CNN test predictions; false positives are shown on the top row and false negatives on the bottom row.</em></p>
-</div>
-
 For context, the same-input comparison in the assignment showed that the custom CNN improved on the non-neural baselines but remained below a fine-tuned pretrained ResNet50. This is consistent with the CNN learning useful task-specific features from scratch while the pretrained model starts with a richer visual representation, as motivated by residual learning (He et al. [2016](#references)); it does not change the custom CNN's standalone result above.
 
 ## Limitations and Future Work
 
 The working data is a curated subsample with an artificially increased bald prevalence of about 23%, rather than the roughly 2% prevalence of the original CelebA bald attribute (Liu et al. [2015](#references)). Precision may therefore be substantially lower in deployment, and performance at the natural prevalence was not measured. CelebA annotations are crowdsourced and can contain label noise, while the two sources differ in brightness, framing, pose, and image style despite source-aware stratification.
 
-The final CNN evaluation represents one selected imbalance strategy: threefold augmentation of bald training images together with weighted binary cross-entropy. The report's preprocessing and augmentation flow is shown below, followed by examples of the applied transformations. A systematic comparison with undersampling, alternative class weights, focal loss, and other sampling strategies would clarify whether the remaining precision gap is intrinsic to the architecture or caused by the training distribution. Additional occlusion-focused augmentation and a graded hair-loss target could also address the crown-occlusion failure mode. Evaluation on a new, naturally prevalent dataset is needed before using the model for real screening.
+The final CNN evaluation represents one selected imbalance strategy: threefold augmentation of bald training images together with weighted binary cross-entropy. The report's preprocessing flow is shown below. A systematic comparison with undersampling, alternative class weights, focal loss, and other sampling strategies would clarify whether the remaining precision gap is intrinsic to the architecture or caused by the training distribution. Additional occlusion-focused augmentation and a graded hair-loss target could also address the crown-occlusion failure mode. Evaluation on a new, naturally prevalent dataset is needed before using the model for real screening.
 
 <div align="center">
   <img width="1440" alt="CNN preprocessing and augmentation pipeline" src="assets/cnn-report/cnn-preprocessing-pipeline.png" />
-  <p><em>Figure 8: Filtering, normalisation, stratified splitting, and CNN-specific augmentation pipeline.</em></p>
-</div>
-
-<div align="center">
-  <img width="1189" alt="Examples of horizontal flip, Gaussian noise, and color jitter augmentation" src="assets/cnn-report/cnn-augmentation.png" />
-  <p><em>Figure 9: Examples of the image augmentations considered during model development.</em></p>
+  <p><em>Figure 7: Filtering, normalisation, stratified splitting, and CNN-specific augmentation pipeline.</em></p>
 </div>
 
 ## References
