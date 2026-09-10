@@ -1,5 +1,9 @@
 # CNN-on-Balding-Data-Set
 
+## Assignment Context
+
+This repository contains the custom convolutional neural network (CNN) component of a machine-learning assignment on binary baldness classification from ordinary facial photographs. The practical objective is a first-stage screening signal: classify an image as **bald** or **not bald** before any later human assessment. The CNN is trained from scratch and is the focus of this repository. The wider assignment used the same fixed data partitions to contextualise the CNN against other approaches, but those other implementations and their results are not part of this CNN description. The CelebA attribute labels and their class imbalance are described by Liu et al. ([2015](#references)).
+
 ## Description of Data Set
 The models are trained and evaluated on two public Kaggle datasets: a CelebA-derived set (ashishjangra27/bald-classification-200k-images-celeba), introduced by Liu et al. (2015), of roughly 200,000 aligned 178×218 celebrity faces pre-labelled bald or not-bald, and the HairLoss set (sithukaungset/hairlossdataset) of 1,114 images with the same binary labels at varied resolutions. The CelebA bald attribute has a positive rate of roughly 2 percent and inherits crowdsourced label noise, which is acknowledged as a limitation. 
 
@@ -63,15 +67,11 @@ The model was trained using the Adam optimizer with a learning rate of 1 × 10�
   <p><em>Figure 4: Final CNN Design Summarised </em></p>
 </div>
 
-## Assignment Context
-
-This repository contains the custom convolutional neural network (CNN) component of a machine-learning assignment on binary baldness classification from ordinary facial photographs. The practical objective is a first-stage screening signal: classify an image as **bald** or **not bald** before any later human assessment. The CNN is trained from scratch and is the focus of this repository. The wider assignment used the same fixed data partitions to contextualise the CNN against other approaches, but those other implementations and their results are not part of this CNN description. The CelebA attribute labels and their class imbalance are described by Liu et al. ([2015](#references)).
-
 ## CNN Evaluation
 
 The held-out test set contains 3,995 images and approximately 23% bald examples. Because a majority-class prediction already gives high accuracy on an imbalanced split, macro-F1 and bald-class precision and recall are more informative than accuracy alone. The CNN used a validation-selected decision threshold of 0.583.
 
-The report figures used to document this CNN are stored in [`assets/cnn-report/`](assets/cnn-report/), including the preprocessing pipeline, augmentation examples, training curves, and interpretability outputs.
+The report figures used to document this CNN are stored in `assets/cnn-report/`, including the preprocessing pipeline, augmentation examples, training curves, and interpretability outputs.
 
 | Metric | Custom CNN |
 | --- | ---: |
@@ -87,9 +87,24 @@ On the test set, the CNN correctly identified 868 of 922 bald images and missed 
 
 ## Interpretation and Error Analysis
 
-The training accuracy increased from 0.73 to 0.89 over 20 epochs while training loss decreased from 0.77 to 0.30. Validation behaviour was more variable early in training, but validation loss reached 0.2578 at the final epoch. Batch normalization, dropout, weighted loss, and minority-class augmentation helped limit the gap between training and validation performance. The corresponding curves are shown in [`cnn-training-curves.png`](assets/cnn-report/cnn-training-curves.png).
+The training accuracy increased from 0.73 to 0.89 over 20 epochs while training loss decreased from 0.77 to 0.30. Validation behaviour was more variable early in training, but validation loss reached 0.2578 at the final epoch. Batch normalization, dropout, weighted loss, and minority-class augmentation helped limit the gap between training and validation performance.
 
-Grad-CAM inspection of the final convolutional layer indicates that the CNN learned a meaningful visual cue: scalp visibility around the crown. Activations for confident bald predictions were concentrated near the top of the head rather than on the background or image framing. This interpretation uses Grad-CAM as described by Selvaraju et al. ([2017](#references)); the report's bald-class example is [`cnn-gradcam-bald.png`](assets/cnn-report/cnn-gradcam-bald.png). This also explains an important failure mode: when a hat or thick hair hides the crown, the network lacks its main positive cue and may default to not-bald. Some apparent false positives also reflect label noise, unusual viewpoints, multiple people, or differences between the CelebA and HairLoss image sources; examples are collected in [`cnn-error-analysis.png`](assets/cnn-report/cnn-error-analysis.png).
+<div align="center">
+  <img width="697" alt="CNN training and validation accuracy and loss curves" src="assets/cnn-report/cnn-training-curves.png" />
+  <p><em>Figure 5: Training and validation accuracy and loss for the custom CNN.</em></p>
+</div>
+
+Grad-CAM inspection of the final convolutional layer indicates that the CNN learned a meaningful visual cue: scalp visibility around the crown. Activations for confident bald predictions were concentrated near the top of the head rather than on the background or image framing. This interpretation uses Grad-CAM as described by Selvaraju et al. ([2017](#references)); the report's bald-class example is shown below. This also explains an important failure mode: when a hat or thick hair hides the crown, the network lacks its main positive cue and may default to not-bald. Some apparent false positives also reflect label noise, unusual viewpoints, multiple people, or differences between the CelebA and HairLoss image sources.
+
+<div align="center">
+  <img width="975" alt="Grad-CAM overlay for a confident bald prediction" src="assets/cnn-report/cnn-gradcam-bald.png" />
+  <p><em>Figure 6: Grad-CAM overlay for a confident bald-class prediction, highlighting the crown and scalp region.</em></p>
+</div>
+
+<div align="center">
+  <img width="1400" alt="Most confidently wrong custom CNN test predictions" src="assets/cnn-report/cnn-error-analysis.png" />
+  <p><em>Figure 7: Most confidently wrong custom-CNN test predictions; false positives are shown on the top row and false negatives on the bottom row.</em></p>
+</div>
 
 For context, the same-input comparison in the assignment showed that the custom CNN improved on the non-neural baselines but remained below a fine-tuned pretrained ResNet50. This is consistent with the CNN learning useful task-specific features from scratch while the pretrained model starts with a richer visual representation, as motivated by residual learning (He et al. [2016](#references)); it does not change the custom CNN's standalone result above.
 
@@ -97,7 +112,17 @@ For context, the same-input comparison in the assignment showed that the custom 
 
 The working data is a curated subsample with an artificially increased bald prevalence of about 23%, rather than the roughly 2% prevalence of the original CelebA bald attribute (Liu et al. [2015](#references)). Precision may therefore be substantially lower in deployment, and performance at the natural prevalence was not measured. CelebA annotations are crowdsourced and can contain label noise, while the two sources differ in brightness, framing, pose, and image style despite source-aware stratification.
 
-The final CNN evaluation represents one selected imbalance strategy: threefold augmentation of bald training images together with weighted binary cross-entropy. The report's preprocessing and augmentation flow is preserved in [`cnn-preprocessing-pipeline.png`](assets/cnn-report/cnn-preprocessing-pipeline.png), and the applied transformations are illustrated in [`cnn-augmentation.png`](assets/cnn-report/cnn-augmentation.png). A systematic comparison with undersampling, alternative class weights, focal loss, and other sampling strategies would clarify whether the remaining precision gap is intrinsic to the architecture or caused by the training distribution. Additional occlusion-focused augmentation and a graded hair-loss target could also address the crown-occlusion failure mode. Evaluation on a new, naturally prevalent dataset is needed before using the model for real screening.
+The final CNN evaluation represents one selected imbalance strategy: threefold augmentation of bald training images together with weighted binary cross-entropy. The report's preprocessing and augmentation flow is shown below, followed by examples of the applied transformations. A systematic comparison with undersampling, alternative class weights, focal loss, and other sampling strategies would clarify whether the remaining precision gap is intrinsic to the architecture or caused by the training distribution. Additional occlusion-focused augmentation and a graded hair-loss target could also address the crown-occlusion failure mode. Evaluation on a new, naturally prevalent dataset is needed before using the model for real screening.
+
+<div align="center">
+  <img width="1440" alt="CNN preprocessing and augmentation pipeline" src="assets/cnn-report/cnn-preprocessing-pipeline.png" />
+  <p><em>Figure 8: Filtering, normalisation, stratified splitting, and CNN-specific augmentation pipeline.</em></p>
+</div>
+
+<div align="center">
+  <img width="1189" alt="Examples of horizontal flip, Gaussian noise, and color jitter augmentation" src="assets/cnn-report/cnn-augmentation.png" />
+  <p><em>Figure 9: Examples of the image augmentations considered during model development.</em></p>
+</div>
 
 ## References
 
